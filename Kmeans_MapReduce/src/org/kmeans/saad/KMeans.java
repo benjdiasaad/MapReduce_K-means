@@ -1,5 +1,224 @@
 package org.kmeans.saad;
 
-public class KMeans {
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.util.Vector;
+import java.text.DecimalFormat;
+ 
+import org.apache.hadoop.conf.*;
+import org.apache.hadoop.filecache.DistributedCache;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.apache.hadoop.util.*;
+public class KMeans extends Configured implements Tool{
+	
+	private static final int MAXITERATIONS = 6;
+    private static final double THRESHOLD = 10;
+    private static boolean StopSignalFromReducer=false;
+    private static int NoChangeCount=0;
+    
+	public static class Point implements Writable
+    {
+		public static final int DIMENTION=2;
+		public double arr[];
+		 
+		public Point()
+		{
+			arr=new double[DIMENTION];
+			for(int i=0;i<DIMENTION;++i)
+			{
+				arr[i]=0;
+			}
+		}
+		 
+		public static double getEulerDist(Point vec1,Point vec2)
+		{
+			if(!(vec1.arr.length==DIMENTION && vec2.arr.length==DIMENTION))
+			{
+				System.exit(1);
+			}
+			double dist=0.0;
+			for(int i=0;i<DIMENTION;++i)
+			{
+				dist+=(vec1.arr[i]-vec2.arr[i])*(vec1.arr[i]-vec2.arr[i]);
+			}
+			return Math.sqrt(dist);
+		}
+		public static double getManhtDist(Point vec1,Point vec2)
+		{
+			if(!(vec1.arr.length==DIMENTION && vec2.arr.length==DIMENTION))
+			{
+				System.exit(1);
+			}
+			double dist=0.0;
+			for(int i=0;i<DIMENTION;++i)
+			{
+				dist+=Math.abs(vec1.arr[i]-vec2.arr[i]);
+			}
+			return dist;
+		}
+		 
+		public void clear()
+		{
+			for(int i=0;i<arr.length;i++)
+			{
+				arr[i]=0.0;
+			}
+		}
+		 
+		public String toString()
+		{
+			DecimalFormat df=new DecimalFormat("0.0000");
+			String rect=String.valueOf(df.format(arr[0]));
+			for(int i=1;i<DIMENTION;i++)
+			{
+				rect+=","+String.valueOf(df.format(arr[i]));
+			}
+			return rect;
+		}
+	 
+		@Override
+		public void readFields(DataInput in) throws IOException 
+		{
+			String str[]=in.readUTF().split(",");
+			for(int i=0;i<DIMENTION;++i)
+			{
+				arr[i]=Double.parseDouble(str[i]);
+			}
+		}
+	 
+		@Override
+		public void write(DataOutput out) throws IOException 
+		{
+			out.writeUTF(this.toString());
+		}
+	}
+	
+	public static boolean stopIteration(Configuration conf) throws IOException //called in main
+    {
+        FileSystem fs=FileSystem.get(conf);
+        Path pervCenterFile=new Path("/hzhou/input/initK");
+        Path currentCenterFile=new Path("/hzhou/output/newCentroid/part-r-00000");
+        if(!(fs.exists(pervCenterFile) && fs.exists(currentCenterFile)))
+        {
+            System.exit(1);
+        }
+        //check whether the centers have changed or not to determine to do iteration or not
+        boolean stop=true;
+        String line1,line2;
+        FSDataInputStream in1=fs.open(pervCenterFile);
+        FSDataInputStream in2=fs.open(currentCenterFile);
+        InputStreamReader isr1=new InputStreamReader(in1);
+        InputStreamReader isr2=new InputStreamReader(in2);
+        BufferedReader br1=new BufferedReader(isr1);
+        BufferedReader br2=new BufferedReader(isr2);
+        Point prevCenter,currCenter;
+        while((line1=br1.readLine())!=null && (line2=br2.readLine())!=null)
+        {
+            prevCenter=new Point();
+            currCenter=new Point();
+            String []str1=line1.split(",");
+            String []str2=line2.split(",");
+            for(int i=0;i<Point.DIMENTION;i++)
+            {
+                prevCenter.arr[i]=Double.parseDouble(str1[i]);
+                currCenter.arr[i]=Double.parseDouble(str2[i]);
+            }
+            if(Point.getEulerDist(prevCenter, currCenter)>THRESHOLD)
+            {
+                stop=false;
+                break;
+            }
+        }
+        //if another iteration is needed, then replace previous controids with current centroids
+        if(stop==false)
+        {
+            fs.delete(pervCenterFile,true);
+            if(fs.rename(currentCenterFile, pervCenterFile)==false)
+            {
+                System.exit(1);
+            }
+        }
+        return stop;
+    }
+	
+	public static class ClusterMapper extends Mapper<LongWritable, Text, Text, Text>  //output<centroid,point>
+    {
+        Vector<Point> centers = new Vector<Point>();
+        Point point=new Point();
+        int k=0;
+        @Override
+        //clear centers
+        public void setup(Context context)
+        {
+            try
+            {
+				Path[] caches=DistributedCache.getLocalCacheFiles(context.getConfiguration());
+				if(caches==null || caches.length<=0)
+				{
+					System.exit(1);
+				}
+				
+				BufferedReader br=new BufferedReader(new FileReader(caches[0].toString()));
+				Point point;
+				String line;
+				while((line=br.readLine())!=null)
+				{
+					point=new Point();
+					String[] str=line.split(",");
+					for(int i=0;i<Point.DIMENTION;i++)
+					{
+						point.arr[i]=Double.parseDouble(str[i]);
+					}
+					centers.add(point);
+					k++;           
+				}
+            }
+			catch(Exception e){}
+        }
+        @Override
+        //output<centroid,point>
+        public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException 
+        {
+			
+			int index=-1;
+			double minDist=Double.MAX_VALUE;
+            String[] str=value.toString().split(",");
+            for(int i=0;i<Point.DIMENTION;i++)
+            {
+                point.arr[i]=Double.parseDouble(str[i]);
+			}
+
+            for(int i=0;i<k;i++)
+            {
+                double dist=Point.getEulerDist(point, centers.get(i));
+                if(dist<minDist)
+                {
+                    minDist=dist;
+                    index=i;
+                }
+            }
+            context.write(new Text(centers.get(index).toString()), new Text(point.toString()));
+        }
+        
+        @Override
+        public void cleanup(Context context) throws IOException,InterruptedException 
+        {
+
+        }
+    }
 
 }
