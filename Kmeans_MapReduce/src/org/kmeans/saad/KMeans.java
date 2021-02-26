@@ -23,14 +23,14 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.*;
-public class KMeans extends Configured implements Tool{
-	
-	private static final int MAXITERATIONS = 6;
+ 
+public class KMeans extends Configured implements Tool
+{
+    private static final int MAXITERATIONS = 6;
     private static final double THRESHOLD = 10;
     private static boolean StopSignalFromReducer=false;
     private static int NoChangeCount=0;
-    
-	public static class Point implements Writable
+    public static class Point implements Writable
     {
 		public static final int DIMENTION=2;
 		public double arr[];
@@ -107,7 +107,7 @@ public class KMeans extends Configured implements Tool{
 		}
 	}
 	
-	public static boolean stopIteration(Configuration conf) throws IOException //called in main
+    public static boolean stopIteration(Configuration conf) throws IOException //called in main
     {
         FileSystem fs=FileSystem.get(conf);
         Path pervCenterFile=new Path("/hzhou/input/initK");
@@ -154,8 +154,8 @@ public class KMeans extends Configured implements Tool{
         }
         return stop;
     }
-	
-	public static class ClusterMapper extends Mapper<LongWritable, Text, Text, Text>  //output<centroid,point>
+     
+    public static class ClusterMapper extends Mapper<LongWritable, Text, Text, Text>  //output<centroid,point>
     {
         Vector<Point> centers = new Vector<Point>();
         Point point=new Point();
@@ -220,8 +220,8 @@ public class KMeans extends Configured implements Tool{
 
         }
     }
-	
-	public static class Combiner extends Reducer<Text, Text, Text, Text> //value=Point_Sum+count
+     
+    public static class Combiner extends Reducer<Text, Text, Text, Text> //value=Point_Sum+count
     {      
         @Override
         //update every centroid except the last one
@@ -251,7 +251,7 @@ public class KMeans extends Configured implements Tool{
             context.write(key, new Text(outputValue));
         }
     }
-	
+ 
 	public static class UpdateCenterReducer extends Reducer<Text, Text, Text, Text> 
     {
 		@Override
@@ -300,5 +300,65 @@ public class KMeans extends Configured implements Tool{
 
         }
     }
-
+    @Override
+    public int run(String[] args) throws Exception 
+    {
+        Configuration conf=getConf();
+        FileSystem fs=FileSystem.get(conf);
+        Job job=new Job(conf);
+        job.setJarByClass(KMeans.class);
+        String[] ourArgs=new GenericOptionsParser(conf, args).getRemainingArgs();
+        FileInputFormat.setInputPaths(job, new Path(ourArgs[0]));
+        Path outDir=new Path(ourArgs[1]);
+        fs.delete(outDir,true);
+        FileOutputFormat.setOutputPath(job, outDir);
+         
+        job.setInputFormatClass(TextInputFormat.class);
+        job.setOutputFormatClass(TextOutputFormat.class);
+        job.setMapperClass(ClusterMapper.class);
+        job.setCombinerClass(Combiner.class);
+        job.setReducerClass(UpdateCenterReducer.class);
+        job.setNumReduceTasks(1);//
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(Text.class);
+         
+        return job.waitForCompletion(true)?0:1;
+    }
+    public static void main(String[] args) throws Exception 
+    {
+        Configuration conf = new Configuration();
+        FileSystem fs=FileSystem.get(conf);
+        String[] ourArgs=new GenericOptionsParser(conf, args).getRemainingArgs(); 
+        Path dataFile=new Path(ourArgs[0]);
+        DistributedCache.addCacheFile(dataFile.toUri(), conf);
+ 
+        int iteration = 1;
+        int success = 1;
+        do 
+        {
+            success ^= ToolRunner.run(conf, new KMeans(), args);
+            iteration++;
+        } while (success == 1 && iteration < MAXITERATIONS && (!stopIteration(conf)) && !StopSignalFromReducer);
+         
+		
+		// for final output(just a mapper only task)
+		
+        Job job=new Job(conf);
+        job.setJarByClass(KMeans.class);
+        //String[] ourArgs=new GenericOptionsParser(conf, args).getRemainingArgs();
+        FileInputFormat.setInputPaths(job, new Path(ourArgs[0]));
+        Path outDir=new Path(ourArgs[1]);
+        fs.delete(outDir,true);
+        FileOutputFormat.setOutputPath(job, outDir);
+         
+        job.setInputFormatClass(TextInputFormat.class);
+        job.setOutputFormatClass(TextOutputFormat.class);
+        job.setMapperClass(ClusterMapper.class);
+        job.setNumReduceTasks(0);
+        job.setOutputKeyClass(Point.class);
+        job.setOutputValueClass(Point.class);
+         
+        job.waitForCompletion(true);
+        
+    }
 }
