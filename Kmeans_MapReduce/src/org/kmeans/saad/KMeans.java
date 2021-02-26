@@ -251,5 +251,54 @@ public class KMeans extends Configured implements Tool{
             context.write(key, new Text(outputValue));
         }
     }
+	
+	public static class UpdateCenterReducer extends Reducer<Text, Text, Text, Text> 
+    {
+		@Override
+        public void setup(Context context)
+        {
+
+        }
+ 
+        @Override
+        public void reduce(Text key,Iterable<Text> values,Context context) throws IOException,InterruptedException
+        {
+			int count=0;
+			Point sumPoint=new Point();
+			Point newCenterPoint=new Point();
+			String outputKey;
+            while(values.iterator().hasNext())
+            {
+                String line=values.iterator().next().toString();
+                String[] str=line.split(":");
+                String[] pointStr=str[0].split(",");
+                count+=Integer.parseInt(str[1]);
+                for(int i=0;i<Point.DIMENTION;i++)
+                {
+                    sumPoint.arr[i]+=Double.parseDouble(pointStr[i]);
+				}
+            }
+            for(int i=0;i<Point.DIMENTION;i++)
+            {
+                newCenterPoint.arr[i] = sumPoint.arr[i]/count;
+			}
+			String[] str=key.toString().split(",");
+			if(newCenterPoint.arr[0]-Double.parseDouble(str[0])<=THRESHOLD && newCenterPoint.arr[1]-Double.parseDouble(str[1])<=THRESHOLD) // compare old and new centroids
+            {
+                NoChangeCount++;
+			}		
+			if(NoChangeCount==10)
+			{
+				StopSignalFromReducer=true;
+			}
+			context.write(new Text(newCenterPoint.toString()),new Text(","+String.valueOf(NoChangeCount)));
+        }
+        
+        @Override
+        public void cleanup(Context context) throws IOException,InterruptedException 
+        {
+
+        }
+    }
 
 }
