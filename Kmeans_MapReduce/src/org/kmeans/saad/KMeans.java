@@ -220,5 +220,36 @@ public class KMeans extends Configured implements Tool{
 
         }
     }
+	
+	public static class Combiner extends Reducer<Text, Text, Text, Text> //value=Point_Sum+count
+    {      
+        @Override
+        //update every centroid except the last one
+        public void reduce(Text key,Iterable<Text> values,Context context) throws IOException,InterruptedException
+        {
+			Point sumPoint=new Point();
+			String outputValue;
+			int count=0;
+            while(values.iterator().hasNext())
+            {
+				String line=values.iterator().next().toString();
+                String[] str1=line.split(":");
+                
+                if(str1.length==2)
+                {
+					count+=Integer.parseInt(str1[1]);
+				}
+				
+                String[] str=str1[0].split(",");
+                for(int i=0;i<Point.DIMENTION;i++)
+                {
+                    sumPoint.arr[i]+=Double.parseDouble(str[i]);
+				}
+                count++;
+            }
+			outputValue=sumPoint.toString()+":"+String.valueOf(count);
+            context.write(key, new Text(outputValue));
+        }
+    }
 
 }
