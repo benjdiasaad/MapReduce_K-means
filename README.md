@@ -1,5 +1,5 @@
-# MapReduce_K-means
-### Implémentation de l'algorithme de clustering k-means utilisant le framework MapReduce (Hadoop version 3.1.3).
+## MapReduce_K-means
+# Implémentation de l'algorithme de clustering k-means utilisant le framework MapReduce (Hadoop version 3.1.3).
 
 **K-means (ou K-moyennes) :** C’est l’un des algorithmes de clustering les plus répandus. Il permet d’analyser un jeu de données caractérisées par un ensemble de descripteurs, afin de regrouper les données “similaires” en groupes (ou clusters).
 
@@ -10,12 +10,11 @@
 c’est : <centroid,point>. </samp>
 
 **Combiner** INPUT: Mapper Output
-OUTPUT:<centroid, string((sum of point)+(point count))
+|| OUTPUT:<centroid, string((sum of point)+(point count))
 
-**Reducer** INPUT: Combiner Output
-OUTPUT: <new_centroid,count_of_current_unchanged_centroid_point>
+**Reducer** INPUT: Combiner Output 
+|| OUTPUT: <new_centroid,count_of_current_unchanged_centroid_point>
 
-Guide pour Compiler et construire .jar manuellement sur la machine virtuelle Hadoop
-======
+## Guide pour Compiler et construire .jar manuellement sur la machine virtuelle Hadoop : 
 
 https://www.mediafire.com/file/esgx0xzm2ftnl2h/Kmeans_MapReduce.pdf/file
