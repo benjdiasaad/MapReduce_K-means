@@ -22,6 +22,6 @@ Après l’installation de PuTTY, lancer l’émulateur et une fenêtre sera dé
 
 2) Utilisation de WinSCP :
 
-<small style="text-align=justify"> WinSCP : est un client SFTP graphique pour Windows. Il utilise SSH et est open source. Le protocole SCP est également supporté. Le but de ce programme est de permettre la copie sécurisée de fichiers entre un ordinateur local et un ordinateur distant.
-Quand on ouvre WinSCP, il déclenche une fenêtre de connexion, il suffit d’entrer l’adresse ip de votre machine virtuelle et port (qui est par défault =2), aussi nom de l’utilisateur = mbds, et password = password. </small>
+<p style="text-align=justify"> WinSCP : est un client SFTP graphique pour Windows. Il utilise SSH et est open source. Le protocole SCP est également supporté. Le but de ce programme est de permettre la copie sécurisée de fichiers entre un ordinateur local et un ordinateur distant.
+Quand on ouvre WinSCP, il déclenche une fenêtre de connexion, il suffit d’entrer l’adresse ip de votre machine virtuelle et port (qui est par défault =2), aussi nom de l’utilisateur = mbds, et password = password. </p>
 
