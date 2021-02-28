@@ -1,6 +1,6 @@
 # K-means MapReduce 
 
-# Implémentation de l'algorithme de clustering k-means utilisant le framework MapReduce (Hadoop version 3.1.3).
+## Implémentation de l'algorithme de clustering k-means en utilisant le framework MapReduce (Hadoop version 3.1.3).
 
 **K-means (ou K-moyennes) :** C’est l’un des algorithmes de clustering les plus répandus. Il permet d’analyser un jeu de données caractérisées par un ensemble de descripteurs, afin de regrouper les données “similaires” en groupes (ou clusters).
 
