@@ -28,7 +28,7 @@ https://www.mediafire.com/file/esgx0xzm2ftnl2h/Kmeans_MapReduce.pdf/file
   <tbody>
     <tr>
       <td align="center">
-        <a href="https://github.com/benjdiasaad">
+        <a href="https://github.com/mohamedbiniz">
           <img width="150" height="150" src="https://github.com/mohamedbiniz.png?v=3&s=150">
           </br>
           Mr Mohamed Biniz
