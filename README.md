@@ -19,3 +19,21 @@ c’est : <centroid,point>. </samp>
 ## Guide pour Compiler et construire .jar manuellement sur la machine virtuelle Hadoop : 
 
 https://www.mediafire.com/file/esgx0xzm2ftnl2h/Kmeans_MapReduce.pdf/file
+
+
+
+## Assigned By
+
+<table>
+  <tbody>
+    <tr>
+      <td align="center">
+        <a href="https://github.com/benjdiasaad">
+          <img width="150" height="150" src="https://github.com/mohamedbiniz.png?v=3&s=150">
+          </br>
+          Mr Mohamed Biniz
+        </a>
+      </td>
+    </tr>
+  <tbody>
+</table>
